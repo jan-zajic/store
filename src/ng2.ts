@@ -13,31 +13,37 @@ export const RESOLVED_POST_MIDDLEWARE = new OpaqueToken('ngrx/store/resolved-pos
 export const REDUCER = new OpaqueToken('ngrx/store/reducer');
 export const INITIAL_STATE = new OpaqueToken('ngrx/store/initial-state');
 
-const dispatcherProvider = provide(Dispatcher, {
-  useFactory() {
-    return new Dispatcher<any>();
-  }
-});
+function dispatcherProvider(dispatcherToken : any) { 
+  return provide(dispatcherToken, {
+    useFactory() {
+      return new Dispatcher<any>();
+    }
+  });
+};
 
-const storeProvider = provide(Store, {
-  deps: [Dispatcher, StoreBackend, INITIAL_STATE],
-  useFactory(dispatcher: Dispatcher<any>, backend: StoreBackend, initialState: any) {
-      return new Store<any>(dispatcher, backend, initialState);
-  }
-});
+function storeProvider(storeToken : any, dispatcherToken : any, storeBackendToken : any) { 
+  return provide(storeToken, {
+    deps: [dispatcherToken, storeBackendToken, INITIAL_STATE],
+    useFactory(dispatcher: Dispatcher<any>, backend: StoreBackend, initialState: any) {
+        return new Store<any>(dispatcher, backend, initialState);
+    }
+  });
+};
 
-const storeBackendProvider = provide(StoreBackend, {
-  deps: [Dispatcher, REDUCER, INITIAL_STATE, RESOLVED_PRE_MIDDLEWARE, RESOLVED_POST_MIDDLEWARE],
-  useFactory(
-    dispatcher: Dispatcher<any>,
-    reducer: Reducer<any>,
-    initialState: any,
-    preMiddleware: Middleware,
-    postMiddleware: Middleware
-  ) {
-    return new StoreBackend(dispatcher, reducer, initialState, preMiddleware, postMiddleware);
-  }
-});
+function storeBackendProvider(storeBackendToken : any, dispatcherToken : any) { 
+  return provide(storeBackendToken, {
+    deps: [dispatcherToken, REDUCER, INITIAL_STATE, RESOLVED_PRE_MIDDLEWARE, RESOLVED_POST_MIDDLEWARE],
+    useFactory(
+      dispatcher: Dispatcher<any>,
+      reducer: Reducer<any>,
+      initialState: any,
+      preMiddleware: Middleware,
+      postMiddleware: Middleware
+    ) {
+      return new StoreBackend(dispatcher, reducer, initialState, preMiddleware, postMiddleware);
+    }
+  });
+}
 
 const resolvedPreMiddlewareProvider = provide(RESOLVED_PRE_MIDDLEWARE, {
   deps: [PRE_MIDDLEWARE],
@@ -53,7 +59,11 @@ const resolvedPostMiddlewareProvider = provide(RESOLVED_POST_MIDDLEWARE, {
   }
 });
 
-export function provideStore(reducer: any, initialState?: any) {
+export function provideStore(reducer: any, initialState?: any, storeOpaqueToken? : OpaqueToken) {
+  var storeToken = storeOpaqueToken ? storeOpaqueToken : Store;
+  var dispatcherToken = storeOpaqueToken ? new OpaqueToken(storeOpaqueToken.toString+"-Dispatcher") : Dispatcher;
+  var storeBackendToken = storeOpaqueToken ? new OpaqueToken(storeOpaqueToken.toString+"-StoreBackend") : StoreBackend;
+  
   return [
     provide(REDUCER, {
       useFactory() {
@@ -76,9 +86,9 @@ export function provideStore(reducer: any, initialState?: any) {
     }),
     provide(PRE_MIDDLEWARE, { multi: true, useValue: (T => T) }),
     provide(POST_MIDDLEWARE, { multi: true, useValue: (T => T) }),
-    dispatcherProvider,
-    storeProvider,
-    storeBackendProvider,
+    dispatcherProvider(dispatcherToken),    
+    storeBackendProvider(storeBackendToken, dispatcherToken),
+    storeProvider(storeToken, dispatcherToken, storeBackendToken),
     resolvedPreMiddlewareProvider,
     resolvedPostMiddlewareProvider
   ];
