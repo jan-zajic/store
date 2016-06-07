@@ -1,10 +1,10 @@
 import {provide, OpaqueToken, Provider, Injector} from '@angular/core';
 
-import {Reducer, Middleware} from './interfaces';
-import {Dispatcher} from './dispatcher';
-import {Store} from './store';
-import {StoreBackend, ActionTypes} from './store-backend';
-import {compose, combineReducers} from './utils';
+import {Reducer, Middleware} from '@ngrx/store/interfaces';
+import {Dispatcher} from '@ngrx/store/dispatcher';
+import {Store} from '@ngrx/store/store';
+import {StoreBackend, ActionTypes} from '@ngrx/store/store-backend';
+import {compose, combineReducers} from '@ngrx/store/utils';
 
 export const PRE_MIDDLEWARE = new OpaqueToken('ngrx/store/pre-middleware');
 export const POST_MIDDLEWARE = new OpaqueToken('ngrx/store/post-middleware');
@@ -21,18 +21,19 @@ function dispatcherProvider(dispatcherToken : any) {
   });
 };
 
-function storeProvider(storeToken : any, dispatcherToken : any, storeBackendToken : any) { 
+function storeProvider(storeToken : any, dispatcherToken : any, storeBackendToken : any, initialStateToken : any) { 
   return provide(storeToken, {
-    deps: [dispatcherToken, storeBackendToken, INITIAL_STATE],
+    deps: [dispatcherToken, storeBackendToken, initialStateToken],
     useFactory(dispatcher: Dispatcher<any>, backend: StoreBackend, initialState: any) {
         return new Store<any>(dispatcher, backend, initialState);
     }
   });
 };
 
-function storeBackendProvider(storeBackendToken : any, dispatcherToken : any) { 
+function storeBackendProvider(storeBackendToken : any, dispatcherToken : any, reducerToken : any, initialStateToken : any, 
+    resolvedPreMiddlewareToken, resolvedPostMiddlewareToken) { 
   return provide(storeBackendToken, {
-    deps: [dispatcherToken, REDUCER, INITIAL_STATE, RESOLVED_PRE_MIDDLEWARE, RESOLVED_POST_MIDDLEWARE],
+    deps: [dispatcherToken, reducerToken, initialStateToken, resolvedPreMiddlewareToken, resolvedPostMiddlewareToken],
     useFactory(
       dispatcher: Dispatcher<any>,
       reducer: Reducer<any>,
@@ -45,27 +46,51 @@ function storeBackendProvider(storeBackendToken : any, dispatcherToken : any) {
   });
 }
 
-const resolvedPreMiddlewareProvider = provide(RESOLVED_PRE_MIDDLEWARE, {
-  deps: [PRE_MIDDLEWARE],
-  useFactory(middleware: Middleware[]) {
-    return compose(...middleware);
-  }
-});
+function resolvedPreMiddlewareProvider(resolvedPreMiddlewareToken : any, preMiddlewareToken : any) {
+    return provide(resolvedPreMiddlewareToken, {
+        deps: [preMiddlewareToken],
+        useFactory(middleware: Middleware[]) {
+            return compose(...middleware);
+        }
+    });
+};
 
-const resolvedPostMiddlewareProvider = provide(RESOLVED_POST_MIDDLEWARE, {
-  deps: [POST_MIDDLEWARE],
-  useFactory(middleware: Middleware[]) {
-    return compose(...middleware);
-  }
-});
+function resolvedPostMiddlewareProvider(resolvedPostMiddlewareToken : any, postMiddlewareToken : any) {
+    return provide(resolvedPostMiddlewareToken, {
+        deps: [postMiddlewareToken],
+        useFactory(middleware: Middleware[]) {
+            return compose(...middleware);
+        }
+    });
+};
+
+function prefixToken(token : OpaqueToken, prefixOpaqueToken : OpaqueToken) : OpaqueToken {
+    if(prefixOpaqueToken) {
+        var storeOpaqueTokenString = prefixOpaqueToken.toString();
+        var tokenString = token.toString();
+        var resultTokenString = storeOpaqueTokenString+"-"+tokenString;
+        return new OpaqueToken(resultTokenString);
+    } else {
+        return token;
+    }
+}
 
 export function provideStore(reducer: any, initialState?: any, storeOpaqueToken? : OpaqueToken) {
   var storeToken = storeOpaqueToken ? storeOpaqueToken : Store;
-  var dispatcherToken = storeOpaqueToken ? new OpaqueToken(storeOpaqueToken.toString+"-Dispatcher") : Dispatcher;
-  var storeBackendToken = storeOpaqueToken ? new OpaqueToken(storeOpaqueToken.toString+"-StoreBackend") : StoreBackend;
+  var dispatchTokenString = storeOpaqueToken.toString()+"-Dispatcher";  
+  var dispatcherToken = storeOpaqueToken ? new OpaqueToken(dispatchTokenString) : Dispatcher;
+  var storeTokenString = storeOpaqueToken.toString()+"-StoreBackend";
+  var storeBackendToken = storeOpaqueToken ? new OpaqueToken(storeTokenString) : StoreBackend;
   
+  var reducerToken = prefixToken(REDUCER, storeOpaqueToken); 
+  var initialStateToken = prefixToken(INITIAL_STATE, storeOpaqueToken);
+  var preMiddlewareToken = prefixToken(PRE_MIDDLEWARE, storeOpaqueToken);
+  var postMiddlewareToken = prefixToken(POST_MIDDLEWARE, storeOpaqueToken);
+  var resolvedPreMiddlewareToken = prefixToken(RESOLVED_PRE_MIDDLEWARE, storeOpaqueToken);
+  var resolvedPostMiddlewareToken = prefixToken(RESOLVED_POST_MIDDLEWARE, storeOpaqueToken);
+
   return [
-    provide(REDUCER, {
+    provide(reducerToken, {
       useFactory() {
         if (typeof reducer === 'function') {
           return reducer;
@@ -74,8 +99,8 @@ export function provideStore(reducer: any, initialState?: any, storeOpaqueToken?
         return combineReducers(reducer);
       }
     }),
-    provide(INITIAL_STATE, {
-      deps: [ REDUCER ],
+    provide(initialStateToken, {
+      deps: [ reducerToken ],
       useFactory(reducer) {
         if (initialState === undefined) {
           return reducer(undefined, { type: ActionTypes.INIT });
@@ -84,22 +109,22 @@ export function provideStore(reducer: any, initialState?: any, storeOpaqueToken?
         return initialState;
       }
     }),
-    provide(PRE_MIDDLEWARE, { multi: true, useValue: (T => T) }),
-    provide(POST_MIDDLEWARE, { multi: true, useValue: (T => T) }),
+    provide(preMiddlewareToken, { multi: true, useValue: (T => T) }),
+    provide(postMiddlewareToken, { multi: true, useValue: (T => T) }),
     dispatcherProvider(dispatcherToken),    
-    storeBackendProvider(storeBackendToken, dispatcherToken),
-    storeProvider(storeToken, dispatcherToken, storeBackendToken),
-    resolvedPreMiddlewareProvider,
-    resolvedPostMiddlewareProvider
+    storeBackendProvider(storeBackendToken, dispatcherToken, reducerToken, initialStateToken, resolvedPreMiddlewareToken, resolvedPostMiddlewareToken),
+    storeProvider(storeToken, dispatcherToken, storeBackendToken, initialStateToken),
+    resolvedPreMiddlewareProvider(resolvedPreMiddlewareToken, preMiddlewareToken),
+    resolvedPostMiddlewareProvider(resolvedPostMiddlewareToken, postMiddlewareToken)
   ];
 }
 
-export function usePreMiddleware(...middleware: Array<Middleware | Provider>) {
-  return provideMiddlewareForToken(PRE_MIDDLEWARE, middleware);
+export function usePreMiddleware(storeOpaqueToken? : OpaqueToken, ...middleware: Array<Middleware | Provider>) {
+  return provideMiddlewareForToken(prefixToken(PRE_MIDDLEWARE,storeOpaqueToken), middleware);
 }
 
-export function usePostMiddleware(...middleware: Array<Middleware | Provider>) {
-  return provideMiddlewareForToken(POST_MIDDLEWARE, middleware);
+export function usePostMiddleware(storeOpaqueToken? : OpaqueToken, ...middleware: Array<Middleware | Provider>) {
+  return provideMiddlewareForToken(prefixToken(POST_MIDDLEWARE,storeOpaqueToken), middleware);
 }
 
 export function createMiddleware(
