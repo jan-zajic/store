@@ -1,10 +1,10 @@
 import {provide, OpaqueToken, Provider, Injector} from '@angular/core';
 
-import {Reducer, Middleware} from '@ngrx/store/interfaces';
-import {Dispatcher} from '@ngrx/store/dispatcher';
-import {Store} from '@ngrx/store/store';
-import {StoreBackend, ActionTypes} from '@ngrx/store/store-backend';
-import {compose, combineReducers} from '@ngrx/store/utils';
+import {Reducer, Middleware} from './interfaces';
+import {Dispatcher} from './dispatcher';
+import {Store} from './store';
+import {StoreBackend, ActionTypes} from './store-backend';
+import {compose, combineReducers} from './utils';
 
 export const PRE_MIDDLEWARE = new OpaqueToken('ngrx/store/pre-middleware');
 export const POST_MIDDLEWARE = new OpaqueToken('ngrx/store/post-middleware');
