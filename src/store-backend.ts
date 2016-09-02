@@ -5,7 +5,7 @@ import 'rxjs/add/operator/scan';
 import 'rxjs/add/operator/observeOn';
 
 import {Dispatcher} from './dispatcher';
-import {Middleware, Reducer} from './interfaces';
+import {Reducer} from './interfaces';
 
 export const ActionTypes = {
   INIT: '@@ngrx/INIT'
@@ -16,8 +16,6 @@ export class StoreBackend {
     protected _dispatcher: Dispatcher<any>,
     protected _reducer: Reducer<any>,
     protected _initialState: any,
-    protected _preMiddleware: Middleware = t => t,
-    protected _postMiddleware: Middleware = t => t
   ) { }
 
   protected _init() {
@@ -26,10 +24,8 @@ export class StoreBackend {
 
   connect(nextCallbackFn: (state: any) => void) {
     this._dispatcher
-      .let(this._preMiddleware)
       .observeOn(queue)
       .scan((state, action) => this._reducer(state, action), this._initialState)
-      .let(this._postMiddleware)
       .subscribe(nextCallbackFn);
 
     this._init();
