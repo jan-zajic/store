@@ -15,7 +15,7 @@ export class StoreBackend {
   constructor(
     protected _dispatcher: Dispatcher<any>,
     protected _reducer: Reducer<any>,
-    protected _initialState: any,
+    protected _initialState: any
   ) { }
 
   protected _init() {
