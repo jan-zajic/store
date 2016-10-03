@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/ngrx/store#readme",
   "devDependencies": {
-    "@angular/core": "^2.0.0-rc.6",
+    "@angular/core": "^2.0.0",
     "es6-promise": "^3.0.2",
     "es6-shim": "^0.35.0",
     "jasmine": "^2.4.1",
@@ -37,15 +37,15 @@
     "lodash": "^3.10.1",
     "reflect-metadata": "0.1.2",
     "rimraf": "^2.5.1",
-    "rxjs": "5.0.0-beta.6",
+    "rxjs": "5.0.0-beta.12",
     "tslint": "^3.4.0",
     "typescript": "^1.8.10",
     "typings": "^0.6.6",
     "zone.js": "^0.6.12"
   },
   "peerDependencies": {
-    "rxjs": "5.0.0-beta.6",
-    "@angular/core": "^2.0.0-rc.6"
+    "rxjs": "5.0.0-beta.12",
+    "@angular/core": "^2.0.0"
   },
   "typings": "./index.d.ts"
 }
